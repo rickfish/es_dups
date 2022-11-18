@@ -1,0 +1,206 @@
+apiVersion: v1 
+kind: Template
+parameters:
+- name: PROJECT_NAME
+- name: APPLICATION_NAME
+- name: TAG
+- name: PORT
+- name: which_app
+- name: env
+- name: es_url1
+- name: es_url2
+- name: es_user
+- name: es_password
+- name: output_directory
+- name: log_each_record
+- name: email_smtp_host
+- name: email_address_from
+- name: email_address_replyto
+- name: email_address_to
+- name: run_continuously
+- name: update_elastic_search
+- name: db_startTimeframe
+- name: db_endTimeframe
+- name: shard_size
+- name: RESOURCE_REQUEST_CPU
+- name: RESOURCE_REQUEST_MEMORY
+- name: RESOURCE_LIMIT_CPU
+- name: RESOURCE_LIMIT_MEMORY
+
+metadata:
+  name: ${APPLICATION_NAME}
+  labels:
+    app: ${APPLICATION_NAME}
+objects:
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: ${PROJECT_NAME}-app-output-claim
+    namespace: ${PROJECT_NAME}
+    annotations:
+      volume.beta.kubernetes.io/storage-class: ocs-storagecluster-cephfs
+  spec:
+    accessModes:
+      - ReadWriteMany
+    resources:
+      requests:
+        storage: 1000Mi
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: ${APPLICATION_NAME}
+    name: ${APPLICATION_NAME}
+  spec:
+    replicas: 1
+    test: false
+    selector:
+      app: ${APPLICATION_NAME}
+      deploymentconfig: ${APPLICATION_NAME}
+    strategy:
+      type: Rolling
+      resources: {}
+      rollingParams:
+        updatePeriodSeconds: 1
+        intervalSeconds: 1
+        timeoutSeconds: 500
+    template:
+      metadata:
+        labels:
+          app: ${APPLICATION_NAME}
+          deploymentconfig: ${APPLICATION_NAME}
+          splunk_filter_type: filter
+      spec:
+        volumes:
+        - name: app-output-volume
+          persistentVolumeClaim:
+            claimName: ${PROJECT_NAME}-app-output-claim
+        containers:
+        - env:
+          - name: APPLICATION_NAME
+            value: ${APPLICATION_NAME}
+          - name: TZ
+            value: America/New_York
+          - name: TAG
+            value: ${TAG}
+          - name: PORT
+            value: ${PORT}
+          - name: which_app
+            value: ${which_app}
+          - name: env
+            value: ${env}
+          - name: es_url1
+            value: ${es_url1}
+          - name: es_url2
+            value: ${es_url2}
+          - name: es_user
+            value: ${es_user}
+          - name: es_password
+            value: ${es_password}
+          - name: output_directory
+            value: ${output_directory}
+          - name: log_each_record
+            value: ${log_each_record}
+          - name: email_smtp_host
+            value: ${email_smtp_host}
+          - name: email_address_from
+            value: ${email_address_from}
+          - name: email_address_replyto
+            value: ${email_address_replyto}
+          - name: email_address_to
+            value: ${email_address_to}
+          - name: run_continuously
+            value: ${run_continuously}
+          - name: update_elastic_search
+            value: ${update_elastic_search}
+          - name: db_startTimeframe
+            value: ${db_startTimeframe}
+          - name: db_endTimeframe
+            value: ${db_endTimeframe}
+          - name: shard_size
+            value: ${shard_size}
+          ports:
+          - containerPort: 8083
+            protocol: TCP
+          - containerPort: 8080
+            protocol: TCP
+          - containerPort: 8443
+            protocol: TCP
+          - containerPort: 8778
+            protocol: TCP
+          image: docker-registry.default.svc:5000/etd-image/${APPLICATION_NAME}
+          name: ${APPLICATION_NAME}
+          livenessProbe:
+            exec:
+              command:
+                - cat 
+                - /etc/appOutput/health.txt
+            failureThreshold: 3
+            initialDelaySeconds: 100
+            periodSeconds: 3
+            successThreshold: 1
+            timeoutSeconds: 30
+          readinessProbe:
+            exec:
+              command:
+                - cat 
+                - /etc/appOutput/health.txt
+            failureThreshold: 3
+            initialDelaySeconds: 100
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 30
+          resources:
+            requests:
+              cpu: ${RESOURCE_REQUEST_CPU}
+              memory: ${RESOURCE_REQUEST_MEMORY}
+            limits:
+              cpu: ${RESOURCE_LIMIT_CPU}
+              memory: ${RESOURCE_LIMIT_MEMORY}
+          volumeMounts:
+          - name: app-output-volume
+            readOnly: false
+            mountPath: /etc/appOutput
+    triggers:
+    - imageChangeParams:
+        auto: false
+        containerNames:
+         - ${APPLICATION_NAME}
+        from:
+          kind: ImageStreamTag
+          namespace: etd-image
+          name: ${APPLICATION_NAME}:${TAG}
+      type: ImageChange
+  status: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${APPLICATION_NAME}
+    name: ${APPLICATION_NAME}
+    namespace: ${PROJECT_NAME}
+  spec:
+    ports:
+    - name: 8083-tcp
+      port: 8083
+      protocol: TCP
+      targetPort: 8083
+    - name: 8080-tcp
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    - name: 8443-tcp
+      port: 8443
+      protocol: TCP
+      targetPort: 8443
+    - name: 8778-tcp
+      port: 8778
+      protocol: TCP
+      targetPort: 8778
+    selector:
+      app: ${APPLICATION_NAME}
+      deploymentconfig: ${APPLICATION_NAME}
+    type: ClusterIP
+    sessionAffinity: None
+  status:
+    loadBalancer: {}

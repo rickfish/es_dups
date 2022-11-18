@@ -1,0 +1,30 @@
+which.app=TaskComparator
+env=prod
+db.url=jdbc:postgresql://pgs-ncp01p1.bcbsfl.com:5436/ncp01p1?ssl=false&currentSchema=conductor_prod
+db.user=svc-sioetdp
+db.password=S68q7P0m
+
+es.url1=edclelkp406.bcbsfl.com
+es.user=netflix_super_user
+es.password=GWkJrxxCH98tPhFF
+output.directory=.
+log.each.record=false
+run.continuously=true
+update.elastic.search=true
+update.scheduled.tasks = true
+
+# 323,652 tasks
+#db.startTimeframe = 2019-10-01
+#db.endTimeframe = 2019-10-02
+
+# 7,361,518 tasks
+#db.startTimeframe = 2019-10-01
+#db.endTimeframe = 2019-11-01
+
+# 47,370 workflows
+db.startTimeframe = 2019-01-01
+db.endTimeframe = 2019-02-01
+
+# 1,489,912 workflows
+#db.startTimeframe = 2019-10-01
+#db.endTimeframe = 2019-11-01
